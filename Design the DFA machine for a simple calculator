@@ -1,0 +1,68 @@
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+public class CalculatorDFA {
+    private enum State {
+        START, INTEGER, DECIMAL, OPERATOR, ERROR
+    }
+
+    private static final Set<Character> validDigits = Set.of('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+    private static final Set<Character> validOperators = Set.of('+', '-', '*', '/');
+
+    private static final Map<State, Map<Character, State>> transitions = new HashMap<>();
+
+    static {
+        Map<Character, State> startTransitions = new HashMap<>();
+        startTransitions.put('-', State.INTEGER);
+        startTransitions.putAll(createDigitTransitions(State.INTEGER));
+        startTransitions.putAll(createDigitTransitions(State.DECIMAL));
+        transitions.put(State.START, startTransitions);
+
+        transitions.put(State.INTEGER, createDigitTransitions(State.INTEGER));
+        transitions.put(State.DECIMAL, createDigitTransitions(State.DECIMAL));
+
+        Map<Character, State> operatorTransitions = new HashMap<>();
+        operatorTransitions.putAll(createDigitTransitions(State.INTEGER));
+        operatorTransitions.putAll(createDigitTransitions(State.DECIMAL));
+        transitions.put(State.OPERATOR, operatorTransitions);
+    }
+
+    private static Map<Character, State> createDigitTransitions(State nextState) {
+        Map<Character, State> digitTransitions = new HashMap<>();
+        for (char digit : validDigits) {
+            digitTransitions.put(digit, nextState);
+        }
+        return digitTransitions;
+    }
+
+    public static boolean validateExpression(String expression) {
+        State currentState = State.START;
+
+        for (char c : expression.toCharArray()) {
+            if (currentState == State.ERROR) {
+                return false; // Transitioned to error state
+            }
+
+            if (validDigits.contains(c)) {
+                currentState = transitions.get(currentState).getOrDefault(c, State.ERROR);
+            } else if (validOperators.contains(c)) {
+                currentState = State.OPERATOR;
+            } else {
+                currentState = State.ERROR; // Invalid character
+            }
+        }
+
+        // The expression is valid if it ends in INTEGER or DECIMAL state
+        return currentState == State.INTEGER || currentState == State.DECIMAL;
+    }
+
+    public static void main(String[] args) {
+        String[] expressions = {"3+1*4/2-0.5", "3++1*4/2-0.5", "3+1*4/2-0.5+"};
+
+        for (String expression : expressions) {
+            boolean isValid = validateExpression(expression);
+            System.out.println("Expression: " + expression + " is " + (isValid ? "valid" : "invalid"));
+        }
+    }
+}
